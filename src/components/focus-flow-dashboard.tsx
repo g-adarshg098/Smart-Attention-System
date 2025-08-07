@@ -9,9 +9,11 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Video, Bot, BarChart2, Zap, Play, Square } from 'lucide-react';
+import { Video, Bot, BarChart2, Zap, Play, Square, Volume2, VolumeX } from 'lucide-react';
 import type { ChartConfig } from "@/components/ui/chart";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 type AttentionDataPoint = {
   time: string;
@@ -34,6 +36,7 @@ export function FocusFlowDashboard() {
   const [statusText, setStatusText] = useState("Ready to focus?");
   const [isClient, setIsClient] = useState(false);
   const [fps, setFps] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -44,7 +47,13 @@ export function FocusFlowDashboard() {
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastFrameTimeRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // This audio file is a short, simple beep.
+    audioRef.current = new Audio('https://www.soundjay.com/buttons/sounds/button-16.mp3');
+  }, []);
 
   const getAttentionStatus = useCallback((level: number) => {
     if (level < 40) return { text: "Distracted", color: "hsl(var(--destructive))" };
@@ -149,9 +158,12 @@ export function FocusFlowDashboard() {
         if (imageDataUri) {
           try {
             const result = await detectFaces({ imageDataUri });
-            // If faces are detected, use the attention level of the first face.
-            // If not, attention is 0. This could be expanded to average attention for multiple faces.
             const newAttentionLevel = result.faces.length > 0 ? result.faces[0].attentionLevel : 0;
+            
+            if (soundEnabled && newAttentionLevel < 40 && attentionLevel >= 40) {
+              audioRef.current?.play().catch(e => console.error("Error playing sound:", e));
+            }
+
             setAttentionLevel(newAttentionLevel);
             setAttentionData(prev => [
               ...prev,
@@ -162,7 +174,6 @@ export function FocusFlowDashboard() {
             ]);
           } catch (error) {
             console.error("Error detecting faces:", error);
-            // Don't toast here to avoid spamming the user on every frame analysis failure
           }
         }
       }, 2000);
@@ -174,7 +185,7 @@ export function FocusFlowDashboard() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [sessionActive, isClient]);
+  }, [sessionActive, isClient, soundEnabled, attentionLevel]);
 
   useEffect(() => {
     if (sessionActive) {
@@ -187,7 +198,7 @@ export function FocusFlowDashboard() {
   }, [attentionLevel, sessionActive, getAttentionStatus, isLoading]);
   
   useEffect(() => {
-    return () => stopWebcam(); // Cleanup on component unmount
+    return () => stopWebcam();
   }, []);
 
   if (!isClient) {
@@ -251,11 +262,13 @@ export function FocusFlowDashboard() {
               <span className="text-xs text-muted-foreground">{fps} FPS</span>
             )}
           </div>
-          {!sessionActive ? (
-            <Button onClick={startSession}><Play className="mr-2 h-4 w-4" /> Start Session</Button>
-          ) : (
-            <Button onClick={endSession} variant="destructive"><Square className="mr-2 h-4 w-4" /> End Session</Button>
-          )}
+          <div className="flex items-center gap-4">
+            {!sessionActive ? (
+              <Button onClick={startSession}><Play className="mr-2 h-4 w-4" /> Start Session</Button>
+            ) : (
+              <Button onClick={endSession} variant="destructive"><Square className="mr-2 h-4 w-4" /> End Session</Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="aspect-video w-full overflow-hidden rounded-md border bg-secondary">
@@ -269,12 +282,19 @@ export function FocusFlowDashboard() {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-2">
+        <CardFooter className="flex flex-col gap-4">
             <div className="flex w-full items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Attention Status</span>
                 <span className="text-lg font-bold" style={{color: getAttentionStatus(attentionLevel).color}}>{statusText}</span>
             </div>
           <Progress value={attentionLevel} className="w-full h-3" />
+            <div className="flex w-full items-center justify-between pt-2 border-t">
+                <Label htmlFor="sound-switch" className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                    Sound Alerts
+                </Label>
+                <Switch id="sound-switch" checked={soundEnabled} onCheckedChange={setSoundEnabled} disabled={sessionActive} />
+            </div>
         </CardFooter>
       </Card>
 
