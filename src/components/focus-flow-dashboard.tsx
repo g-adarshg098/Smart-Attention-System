@@ -33,6 +33,7 @@ export function FocusFlowDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [statusText, setStatusText] = useState("Ready to focus?");
   const [isClient, setIsClient] = useState(false);
+  const [fps, setFps] = useState(0);
 
   useEffect(() => {
     setIsClient(true);
@@ -42,6 +43,7 @@ export function FocusFlowDashboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFrameTimeRef = useRef<number>(0);
   const { toast } = useToast();
 
   const getAttentionStatus = useCallback((level: number) => {
@@ -78,6 +80,7 @@ export function FocusFlowDashboard() {
         videoRef.current.srcObject = null;
       }
     }
+    setFps(0);
   };
 
   const captureFrame = () => {
@@ -135,7 +138,13 @@ export function FocusFlowDashboard() {
 
   useEffect(() => {
     if (sessionActive && isClient) {
+      lastFrameTimeRef.current = performance.now();
       intervalRef.current = setInterval(async () => {
+        const now = performance.now();
+        const delta = now - lastFrameTimeRef.current;
+        lastFrameTimeRef.current = now;
+        setFps(Math.round(1000 / delta));
+
         const imageDataUri = captureFrame();
         if (imageDataUri) {
           try {
@@ -238,6 +247,9 @@ export function FocusFlowDashboard() {
           <div className="flex items-center gap-2">
             <Video className="h-6 w-6" />
             <CardTitle>Live Feed</CardTitle>
+             {sessionActive && (
+              <span className="text-xs text-muted-foreground">{fps} FPS</span>
+            )}
           </div>
           {!sessionActive ? (
             <Button onClick={startSession}><Play className="mr-2 h-4 w-4" /> Start Session</Button>
