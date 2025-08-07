@@ -174,9 +174,17 @@ export function FocusFlowDashboard() {
             ]);
           } catch (error) {
             console.error("Error detecting faces:", error);
+            // Don't toast on 429 errors, as it's an expected rate limit.
+            if (!(error instanceof Error && error.message.includes('429'))) {
+                toast({
+                    variant: "destructive",
+                    title: "AI Error",
+                    description: "Could not analyze the image.",
+                });
+            }
           }
         }
-      }, 2000);
+      }, 5000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -185,7 +193,7 @@ export function FocusFlowDashboard() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [sessionActive, isClient, soundEnabled, attentionLevel]);
+  }, [sessionActive, isClient, soundEnabled, attentionLevel, toast]);
 
   useEffect(() => {
     if (sessionActive) {
