@@ -29,7 +29,72 @@ An AI-powered attendance management system using real-time facial recognition bu
 
 ### 1. Clone the Repository
 
-```bash
+
 git clone https://github.com/g-adarshg098/attendance_app.git
 cd attendance_app
 
+### 2. Install Dependencies
+Use pip to install required libraries:
+
+bash
+Copy
+Edit
+pip install -r requirements.txt
+If requirements.txt is not available, manually install:
+
+bash
+Copy
+Edit
+pip install streamlit opencv-python face_recognition numpy pandas
+3. Run the App
+bash
+Copy
+Edit
+streamlit run app.py
+📂 Folder Structure
+bash
+Copy
+Edit
+attendance_app/
+│
+├── app.py                   # Main Streamlit app
+├── enroll.py                # Script for face registration
+├── detect.py                # Script for face detection and matching
+├── utils/                   # Utility functions
+├── face_data/               # Stored encodings and names
+├── attendance_records/      # CSV files of attendance logs
+└── ...
+📊 Sample Output
+Live face recognition window with marked names.
+
+CSV file with name, date, and time of attendance.
+
+📌 TODO / Improvements
+Add face spoofing prevention
+
+Improve UI and error handling
+
+Store data in a database instead of flat CSV
+
+Admin login for access control
+
+📜 License
+MIT License
+
+🤝 Contributors
+Your Name
+
+Made with ❤️ using Streamlit and OpenCV
+
+yaml
+Copy
+Edit
+
+---
+
+Let me know if you'd like:
+- A professional project thumbnail for GitHub
+- A `requirements.txt` generated from this code
+- A `demo.gif` or badge suggestions for the README
+
+I can also help rewrite or tailor this for your resume or academic portfolio.
