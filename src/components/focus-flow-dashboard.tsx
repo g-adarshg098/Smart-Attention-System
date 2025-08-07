@@ -48,12 +48,7 @@ export function FocusFlowDashboard() {
     if (level < 75) return { text: "Attentive", color: "hsl(var(--chart-4))" };
     return { text: "Focused", color: "hsl(var(--accent))" };
   }, []);
-
-  useEffect(() => {
-    const status = getAttentionStatus(attentionLevel);
-    if(sessionActive) setStatusText(status.text);
-  }, [attentionLevel, sessionActive, getAttentionStatus]);
-
+  
   const startWebcam = async () => {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -145,6 +140,16 @@ export function FocusFlowDashboard() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [sessionActive, isClient]);
+
+  useEffect(() => {
+    if (sessionActive) {
+        const status = getAttentionStatus(attentionLevel);
+        setStatusText(status.text);
+    } else {
+        setStatusText("Ready to focus?");
+        setAttentionLevel(0);
+    }
+  }, [attentionLevel, sessionActive, getAttentionStatus]);
   
   useEffect(() => {
     return () => stopWebcam(); // Cleanup on component unmount
@@ -301,5 +306,3 @@ export function FocusFlowDashboard() {
     </div>
   );
 }
-
-    
