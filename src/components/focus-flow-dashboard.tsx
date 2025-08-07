@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import { detectFaces } from '@/ai/flows/detect-faces';
 import { summarizeSession } from '@/ai/flows/summarize-session';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Video, Bot, BarChart2, Zap, Play, Square, Loader2 } from 'lucide-react';
+import { Video, Bot, BarChart2, Zap, Play, Square } from 'lucide-react';
 import type { ChartConfig } from "@/components/ui/chart";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -39,6 +39,7 @@ export function FocusFlowDashboard() {
   }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
@@ -79,11 +80,25 @@ export function FocusFlowDashboard() {
     }
   };
 
+  const captureFrame = () => {
+    if (!videoRef.current || !canvasRef.current) return null;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg');
+    }
+    return null;
+  }
+
   const startSession = () => {
     setSessionActive(true);
     setSummary(null);
     setAttentionData([]);
-    setAttentionLevel(50); // Start at a neutral level
+    setAttentionLevel(0);
     setStatusText("Initializing...");
     startWebcam();
   };
@@ -120,16 +135,27 @@ export function FocusFlowDashboard() {
 
   useEffect(() => {
     if (sessionActive && isClient) {
-      intervalRef.current = setInterval(() => {
-        const newAttentionLevel = Math.random() * 100;
-        setAttentionLevel(newAttentionLevel)
-        setAttentionData(prev => [
-          ...prev,
-          {
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            attentionLevel: newAttentionLevel
+      intervalRef.current = setInterval(async () => {
+        const imageDataUri = captureFrame();
+        if (imageDataUri) {
+          try {
+            const result = await detectFaces({ imageDataUri });
+            // If faces are detected, use the attention level of the first face.
+            // If not, attention is 0. This could be expanded to average attention for multiple faces.
+            const newAttentionLevel = result.faces.length > 0 ? result.faces[0].attentionLevel : 0;
+            setAttentionLevel(newAttentionLevel);
+            setAttentionData(prev => [
+              ...prev,
+              {
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                attentionLevel: newAttentionLevel
+              }
+            ]);
+          } catch (error) {
+            console.error("Error detecting faces:", error);
+            // Don't toast here to avoid spamming the user on every frame analysis failure
           }
-        ]);
+        }
       }, 2000);
     } else {
       if (intervalRef.current) {
@@ -145,11 +171,11 @@ export function FocusFlowDashboard() {
     if (sessionActive) {
         const status = getAttentionStatus(attentionLevel);
         setStatusText(status.text);
-    } else {
+    } else if (!isLoading) {
         setStatusText("Ready to focus?");
         setAttentionLevel(0);
     }
-  }, [attentionLevel, sessionActive, getAttentionStatus]);
+  }, [attentionLevel, sessionActive, getAttentionStatus, isLoading]);
   
   useEffect(() => {
     return () => stopWebcam(); // Cleanup on component unmount
@@ -221,8 +247,9 @@ export function FocusFlowDashboard() {
         </CardHeader>
         <CardContent>
           <div className="aspect-video w-full overflow-hidden rounded-md border bg-secondary">
-            <video ref={videoRef} autoPlay playsInline muted className={`h-full w-full object-cover transition-opacity ${sessionActive ? 'opacity-100' : 'opacity-0 hidden'}`}/>
-            {!sessionActive && (
+            <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover"/>
+            <canvas ref={canvasRef} className="hidden" />
+            {!streamRef.current && (
                  <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
                     <Video className="h-16 w-16" />
                     <p>Your webcam feed will appear here</p>
