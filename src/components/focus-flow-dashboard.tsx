@@ -121,15 +121,13 @@ export function FocusFlowDashboard() {
   useEffect(() => {
     if (sessionActive) {
       intervalRef.current = setInterval(() => {
-        setAttentionLevel(prev => {
-          const change = (Math.random() - 0.5) * 15;
-          return Math.max(0, Math.min(100, prev + change));
-        });
+        const newAttentionLevel = Math.random() * 100;
+        setAttentionLevel(newAttentionLevel)
         setAttentionData(prev => [
           ...prev,
           {
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            attentionLevel: attentionLevel
+            attentionLevel: newAttentionLevel
           }
         ]);
       }, 2000);
@@ -141,7 +139,7 @@ export function FocusFlowDashboard() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [sessionActive, attentionLevel]);
+  }, [sessionActive]);
   
   useEffect(() => {
     return () => stopWebcam(); // Cleanup on component unmount
