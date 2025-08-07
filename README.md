@@ -30,6 +30,6 @@ An AI-powered attendance management system using real-time facial recognition bu
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/attendance_app.git
+git clone https://github.com/g-adarshg098/attendance_app.git
 cd attendance_app
 
