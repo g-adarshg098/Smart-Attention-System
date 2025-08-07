@@ -32,6 +32,11 @@ export function FocusFlowDashboard() {
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [statusText, setStatusText] = useState("Ready to focus?");
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -119,7 +124,7 @@ export function FocusFlowDashboard() {
   };
 
   useEffect(() => {
-    if (sessionActive) {
+    if (sessionActive && isClient) {
       intervalRef.current = setInterval(() => {
         const newAttentionLevel = Math.random() * 100;
         setAttentionLevel(newAttentionLevel)
@@ -139,11 +144,61 @@ export function FocusFlowDashboard() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [sessionActive]);
+  }, [sessionActive, isClient]);
   
   useEffect(() => {
     return () => stopWebcam(); // Cleanup on component unmount
   }, []);
+
+  if (!isClient) {
+    return (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+            <Card className="lg:col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Video className="h-6 w-6" />
+                        <CardTitle>Live Feed</CardTitle>
+                    </div>
+                    <Skeleton className="h-10 w-32" />
+                </CardHeader>
+                <CardContent>
+                    <div className="aspect-video w-full overflow-hidden rounded-md border bg-secondary">
+                        <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                            <Video className="h-16 w-16" />
+                            <p>Your webcam feed will appear here</p>
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-2">
+                    <div className="flex w-full items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">Attention Status</span>
+                        <Skeleton className="h-6 w-24" />
+                    </div>
+                    <Skeleton className="h-3 w-full" />
+                </CardFooter>
+            </Card>
+            <Card className="flex flex-col">
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <BarChart2 className="h-6 w-6" />
+                        <CardTitle>Session Analysis</CardTitle>
+                    </div>
+                    <CardDescription>
+                        Your session analysis will appear here.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col justify-center">
+                    <div className="flex-1 flex flex-col justify-center items-center text-center p-4 rounded-lg bg-secondary">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <Zap className="h-12 w-12" />
+                            <p className="font-medium">Start a session to see your focus analysis.</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
